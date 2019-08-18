@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	routedhost "github.com/libp2p/go-libp2p/p2p/host/routed"
+
 	log "github.com/ChainSafe/log15"
 	ds "github.com/ipfs/go-datastore"
 	libp2p "github.com/libp2p/go-libp2p"
@@ -14,10 +16,10 @@ import (
 	net "github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
-	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
+//ProtocolPrefix defines the protocol prefix
 const ProtocolPrefix = "/dotcon/0.5"
 
 // Service describes a p2p service, including host and dht
@@ -40,23 +42,30 @@ func NewService(conf *Config) (*Service, error) {
 
 	// TODO: create new libp2p node with ctx and opts
 	// https://godoc.org/github.com/libp2p/go-libp2p#New
+	hostLib, err := libp2p.New(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
 
 	// TODO; create new map datastore
 	// https://godoc.org/github.com/ipfs/go-datastore#MapDatastore
+	mapDatastore := ds.NewMapDatastore()
 
 	// TODO: create new kad-dht using ctx, host, and datastore
 	// https://godoc.org/github.com/libp2p/go-libp2p-kad-dht#NewDHT
+	ipfsDHT := kaddht.NewDHT(ctx, hostLib, mapDatastore)
 
 	// TODO: wrap the host with routed host so we can look up peers in DHT
 	// https://godoc.org/github.com/libp2p/go-libp2p/p2p/host/routed#Wrap
-
-	h.SetStreamHandler(ProtocolPrefix, handleStream)
+	routedHost := routedhost.Wrap(hostLib, ipfsDHT)
+	hostLib = routedHost
+	hostLib.SetStreamHandler(ProtocolPrefix, handleStream)
 
 	bootstrapNodes, err := stringsToPeerInfos(conf.BootstrapNodes)
 	s := &Service{
 		ctx:            ctx,
-		host:           h,
-		dht:            dht,
+		host:           hostLib,
+		dht:            ipfsDHT,
 		bootstrapNodes: bootstrapNodes,
 		noBootstrap:    conf.NoBootstrap,
 	}

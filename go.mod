@@ -1,4 +1,4 @@
-module github.com/ansermino/dotcon0.5
+module github.com/jeffprestes/dotcon0.5
 
 go 1.12
 

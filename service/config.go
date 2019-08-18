@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+
 	"github.com/libp2p/go-libp2p"
 	ma "github.com/multiformats/go-multiaddr"
 )
